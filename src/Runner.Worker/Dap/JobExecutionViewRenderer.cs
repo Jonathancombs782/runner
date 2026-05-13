@@ -367,6 +367,11 @@ namespace GitHub.Runner.Worker.Dap
             }
 
             using var sw = new StringWriter(CultureInfo.InvariantCulture);
+            // Force LF line breaks; YamlDotNet's Emitter calls WriteLine,
+            // which would otherwise produce CRLF on Windows and break
+            // both our document-end stripping below and downstream
+            // consumers that assume a single line-break convention.
+            sw.NewLine = "\n";
             var emitter = new Emitter(sw);
             emitter.Emit(new StreamStart());
             emitter.Emit(new DocumentStart(null, null, true));

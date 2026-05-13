@@ -95,6 +95,11 @@ namespace GitHub.Runner.Worker.Dap
             }
 
             using var sw = new StringWriter(CultureInfo.InvariantCulture);
+            // Force LF line breaks; YamlDotNet's Emitter calls WriteLine,
+            // which would otherwise produce CRLF on Windows and corrupt
+            // both the document-end stripping below and the per-line
+            // indentation pass that follows.
+            sw.NewLine = "\n";
             var emitter = new Emitter(sw);
             var adapter = new TemplateTokenYamlAdapter(emitter);
             adapter.WriteStart();

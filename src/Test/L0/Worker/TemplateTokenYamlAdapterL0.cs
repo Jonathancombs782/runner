@@ -170,5 +170,22 @@ namespace GitHub.Runner.Common.Tests.Worker
             string yaml = TemplateTokenYamlAdapter.Serialize(token, 0);
             Assert.False(yaml.EndsWith("\n"));
         }
+
+        [Fact]
+        [Trait("Level", "L0")]
+        [Trait("Category", "Worker")]
+        public void Serialize_AlwaysUsesLfLineBreaks()
+        {
+            // Regression: YamlDotNet's Emitter calls WriteLine, which on
+            // Windows produces CRLF (the host's Environment.NewLine).
+            // Serialize must force LF so the rendered view round-trips
+            // regardless of platform.
+            var map = new MappingToken(null, null, null);
+            map.Add(Str("k1"), Str("v1"));
+            map.Add(Str("k2"), Num(2));
+            map.Add(Str("k3"), Bool(true));
+            string yaml = TemplateTokenYamlAdapter.Serialize(map, indentSpaces: 2);
+            Assert.DoesNotContain("\r", yaml);
+        }
     }
 }

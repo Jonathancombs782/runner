@@ -613,5 +613,31 @@ namespace GitHub.Runner.Common.Tests.Worker
             // entry gets an inline skipped annotation.
             Assert.Equal(unmarked.EntryStartLines[1], marked.EntryStartLines[1]);
         }
+
+        [Fact]
+        [Trait("Level", "L0")]
+        [Trait("Category", "Worker")]
+        public void Render_AlwaysUsesLfLineBreaks()
+        {
+            // Regression: YamlDotNet's Emitter calls WriteLine, which on
+            // Windows produces CRLF (the host's Environment.NewLine).
+            // FormatScalar / TemplateTokenYamlAdapter.Serialize must force
+            // LF so the rendered view round-trips regardless of platform.
+            var entry = new JobExecutionViewEntry(JobExecutionPhase.Main, "with: colon", id: "step-1", uses: "actions/checkout@v4");
+            var result = JobExecutionViewRenderer.Render("job-1", new[] { entry });
+            Assert.DoesNotContain("\r", result.Yaml);
+        }
+
+        [Fact]
+        [Trait("Level", "L0")]
+        [Trait("Category", "Worker")]
+        public void FormatScalar_AlwaysUsesLfLineBreaks()
+        {
+            // Direct check on FormatScalar to guard against future refactors
+            // that bypass the full Render path but still emit through
+            // YamlDotNet.
+            Assert.DoesNotContain("\r", JobExecutionViewRenderer.FormatScalar("with: colon"));
+            Assert.DoesNotContain("\r", JobExecutionViewRenderer.FormatScalar("hello"));
+        }
     }
 }
