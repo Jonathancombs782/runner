@@ -89,6 +89,11 @@ namespace GitHub.Runner.Worker.Dap
         private IStep _currentStep;
         private IExecutionContext _jobContext;
 
+        // Set true once OnJobCompletedAsync begins its inspection pause.
+        // While set, HandleStackTrace surfaces the synthetic "Complete job"
+        // frame so the client highlights the cleanup line.
+        private bool _jobCompleted;
+
         // Client connection tracking for reconnection support
         private volatile bool _isClientConnected;
 
@@ -244,6 +249,10 @@ namespace GitHub.Runner.Worker.Dap
                     {
                         if (_jobContext != null)
                         {
+                            lock (_stateLock)
+                            {
+                                _jobCompleted = true;
+                            }
                             Trace.Info("Job completed — pausing for inspection");
                             SendStoppedEvent("completed", "Job completed — inspect variables before the session ends.");
 
@@ -1380,10 +1389,12 @@ namespace GitHub.Runner.Worker.Dap
         {
             IStep currentStep;
             JobExecutionView view;
+            bool jobCompleted;
             lock (_stateLock)
             {
                 currentStep = _currentStep;
                 view = _executionView;
+                jobCompleted = _jobCompleted;
             }
 
             var frames = new List<StackFrame>();
@@ -1392,9 +1403,23 @@ namespace GitHub.Runner.Worker.Dap
             {
                 var source = BuildExecutionViewSource(view.JobId);
 
-                // Frame 0: the currently-executing step (only when one is set).
-                if (currentStep != null)
+                if (jobCompleted)
                 {
+                    // Surface the synthetic Complete job step so the client
+                    // highlights the cleanup line at end-of-job pause.
+                    frames.Add(new StackFrame
+                    {
+                        Id = _currentFrameId,
+                        Name = MaskUserVisibleText("Complete job"),
+                        Line = view.CompleteJobLine,
+                        Column = 1,
+                        Source = source,
+                        PresentationHint = "normal",
+                    });
+                }
+                else if (currentStep != null)
+                {
+                    // Frame 0: the currently-executing step (only when one is set).
                     var stepLine = view.TryGetLineForStep(currentStep) ?? 1;
                     frames.Add(new StackFrame
                     {

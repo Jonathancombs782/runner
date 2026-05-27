@@ -95,14 +95,21 @@ namespace GitHub.Runner.Worker.Dap
     /// </summary>
     internal readonly struct RenderResult
     {
-        public RenderResult(string yaml, IReadOnlyList<int> entryStartLines)
+        public RenderResult(string yaml, IReadOnlyList<int> entryStartLines, int completeJobLine)
         {
             Yaml = yaml;
             EntryStartLines = entryStartLines;
+            CompleteJobLine = completeJobLine;
         }
 
         public string Yaml { get; }
         public IReadOnlyList<int> EntryStartLines { get; }
+
+        /// <summary>
+        /// 1-based line where the synthetic <c>- step: Complete job</c> entry
+        /// appears in <see cref="Yaml"/>. Always non-zero — Cleanup is always emitted.
+        /// </summary>
+        public int CompleteJobLine { get; }
     }
 
     /// <summary>
@@ -160,9 +167,11 @@ namespace GitHub.Runner.Worker.Dap
             // cleanup: section — always present, preceded by a blank line.
             sb.Append('\n');
             sb.Append("cleanup:\n");
+            newlinesEmitted += 2;
+            int completeJobLine = newlinesEmitted + 1;
             sb.Append("  - step: Complete job\n");
 
-            return new RenderResult(sb.ToString(), Array.AsReadOnly(startLines));
+            return new RenderResult(sb.ToString(), Array.AsReadOnly(startLines), completeJobLine);
         }
 
         private static void EmitPhaseSection(

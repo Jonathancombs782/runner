@@ -40,6 +40,7 @@ namespace GitHub.Runner.Worker.Dap
             new(StringComparer.Ordinal);
         private string _yaml;
         private IReadOnlyList<int> _entryStartLines = Array.Empty<int>();
+        private int _completeJobLine;
 
         public JobExecutionView(string jobId)
         {
@@ -68,6 +69,21 @@ namespace GitHub.Runner.Worker.Dap
                 lock (_lock)
                 {
                     return _yaml;
+                }
+            }
+        }
+
+        /// <summary>
+        /// 1-based line where the synthetic <c>- step: Complete job</c> entry
+        /// appears in <see cref="Yaml"/>. Always non-zero — Cleanup is always emitted.
+        /// </summary>
+        public int CompleteJobLine
+        {
+            get
+            {
+                lock (_lock)
+                {
+                    return _completeJobLine;
                 }
             }
         }
@@ -261,6 +277,7 @@ namespace GitHub.Runner.Worker.Dap
             var result = JobExecutionViewRenderer.Render(_jobId, _entries.AsReadOnly());
             _yaml = result.Yaml;
             _entryStartLines = result.EntryStartLines;
+            _completeJobLine = result.CompleteJobLine;
 
             _lineByStep.Clear();
             for (int i = 0; i < _stepIdentities.Count; i++)

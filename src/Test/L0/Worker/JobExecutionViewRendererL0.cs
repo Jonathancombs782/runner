@@ -520,6 +520,36 @@ namespace GitHub.Runner.Common.Tests.Worker
         [Fact]
         [Trait("Level", "L0")]
         [Trait("Category", "Worker")]
+        public void Render_ReportsCompleteJobLineMatchingYaml()
+        {
+            // Empty entries — Cleanup still emitted.
+            var emptyResult = JobExecutionViewRenderer.Render("j", new List<JobExecutionViewEntry>());
+            AssertCompleteJobLineMatchesYaml(emptyResult);
+
+            // Non-empty entries across phases.
+            var populatedResult = JobExecutionViewRenderer.Render("build", WorkedExampleEntries());
+            AssertCompleteJobLineMatchesYaml(populatedResult);
+        }
+
+        private static void AssertCompleteJobLineMatchesYaml(RenderResult result)
+        {
+            var lines = result.Yaml.Split('\n');
+            int? actual = null;
+            for (int i = 0; i < lines.Length; i++)
+            {
+                if (lines[i] == "  - step: Complete job")
+                {
+                    actual = i + 1;
+                    break;
+                }
+            }
+            Assert.NotNull(actual);
+            Assert.Equal(actual.Value, result.CompleteJobLine);
+        }
+
+        [Fact]
+        [Trait("Level", "L0")]
+        [Trait("Category", "Worker")]
         public void Render_NoPerEntryPhaseField()
         {
             // The phase: <value> per-entry field is gone — the section
