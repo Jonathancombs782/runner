@@ -1,5 +1,5 @@
-@setlocal
-@echo off
+@jonathancombs782
+@jonathancombs782
  rem add expected utils to path
 IF EXIST C:\Program Files\Git\usr\bin (
   SET PATH=C:\Program Files\Git\usr\bin;%PATH%
